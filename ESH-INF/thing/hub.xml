@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="lutronmqtt"
+                          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                          xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
+                          xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
+
+    <!-- Wink Hub -->
+    <bridge-type id="hub">
+        <label>Lutron-MQTT Gateway</label>
+        <description>The Lutron-MQTT Gateway represents the network device communicating with the Lutron ClearConnect network.</description>
+
+        <properties>
+            <property name="vendor">Hacienda</property>
+            <property name="uuid"></property>
+            <property name="url"></property>
+        </properties>
+
+        <config-description>
+            <parameter name="token" type="text">
+                <label>Security Token</label>
+                <description>The token authorized by the luton-mqtt infrastructure</description>
+                <required>true</required>
+            </parameter>
+        </config-description>
+
+    </bridge-type>
+
+</thing:thing-descriptions>
