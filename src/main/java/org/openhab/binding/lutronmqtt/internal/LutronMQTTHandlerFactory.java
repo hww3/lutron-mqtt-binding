@@ -17,6 +17,7 @@ import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.*;
 import java.util.*;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.discovery.DiscoveryService;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ThingUID;
@@ -33,6 +34,8 @@ import org.openhab.binding.lutronmqtt.handler.LutronMQTTRemoteHandler;
 import org.openhab.binding.lutronmqtt.handler.LutronMQTTVariableFanHandler;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.annotations.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The {@link LutronMQTTHandlerFactory} is responsible for creating things and thing
@@ -44,6 +47,8 @@ import org.osgi.service.component.annotations.Component;
 @NonNullByDefault
 public class LutronMQTTHandlerFactory extends BaseThingHandlerFactory {
 
+    private final static Logger logger = LoggerFactory.getLogger(LutronMQTTHandlerFactory.class);
+
     public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = LutronMQTTBindingConstants.SUPPORTED_THING_TYPES_UIDS;
     private Map<ThingUID, ServiceRegistration<?>> discoveryServiceRegs = new HashMap<>();
 
@@ -53,11 +58,15 @@ public class LutronMQTTHandlerFactory extends BaseThingHandlerFactory {
     }
 
     @Override
+    @Nullable
     protected ThingHandler createHandler(Thing thing) {
 
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
 
+        logger.warn("Creating a handler for " + thing.getThingTypeUID() + ", " + thing.getLabel());
+
         if (thingTypeUID.equals(THING_TYPE_MQTTHUB)) {
+            logger.warn("Creating hub handler");
             LutronMQTTHubHandler handler = new LutronMQTTHubHandler((Bridge) thing);
             registerDeviceDiscoveryService(handler);
             return handler;

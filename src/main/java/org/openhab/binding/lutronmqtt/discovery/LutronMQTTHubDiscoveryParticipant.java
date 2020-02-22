@@ -44,9 +44,13 @@ logger.warn("Discovery result: " + service.toString());
             logger.warn("name: " + service.getName());
             logger.warn("qname: " + service.getQualifiedName());
             logger.warn("nice: " + service.getNiceTextString());
+            logger.warn("text: " + new String(service.getTextBytes()));
+
             Enumeration<String> pn = service.getPropertyNames();
-            while(pn.hasMoreElements())
-                logger.warn("prop: " + pn.nextElement());
+            while(pn.hasMoreElements()) {
+                String name;
+                logger.warn("prop: " + (name = pn.nextElement()) + " " + service.getPropertyString(name));
+            }
 
             logger.debug("Got discovered device.");
             if (true /*getDiscoveryServiceCallback() != null*/) {
@@ -68,6 +72,11 @@ logger.warn("Discovery result: " + service.toString());
                     Map<String, Object> properties = new HashMap<>(2);
                     String u = service.getPropertyString("uuid");
                     String s = service.getServer();
+
+                    if(s== null || s.isEmpty()) {
+                        String [] addrs = service.getHostAddresses();
+                        if(addrs.length > 0) s = addrs[0];
+                    }
 
                     if(u == null || s == null || u.isEmpty() || s.isEmpty()) // incomplete discovery result
                     {

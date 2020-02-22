@@ -12,11 +12,13 @@
  */
 package org.openhab.binding.lutronmqtt;
 
-import com.google.common.collect.ImmutableSet;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 
+import java.util.Collections;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The {@link LutronMQTTBindingConstants} class defines common constants, which are
@@ -34,10 +36,12 @@ public class LutronMQTTBindingConstants {
     public final static ThingTypeUID THING_TYPE_VARIABLE_FAN = new ThingTypeUID(BINDING_ID, "variableFan");
     public final static ThingTypeUID THING_TYPE_REMOTE = new ThingTypeUID(BINDING_ID, "remote");
 
-    public final static Set<ThingTypeUID> SUPPORTED_HUBS_UIDS = ImmutableSet.of(THING_TYPE_MQTTHUB);
+    public final static Set<ThingTypeUID> SUPPORTED_HUBS_UIDS = Collections.unmodifiableSet(
+            Stream.of(THING_TYPE_MQTTHUB).collect(Collectors.toSet()));
 
-    public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = ImmutableSet.of(THING_TYPE_DIMMABLE_LIGHT,
-             THING_TYPE_VARIABLE_FAN, THING_TYPE_REMOTE);
+    public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Collections.unmodifiableSet(
+            Stream.of(THING_TYPE_DIMMABLE_LIGHT,
+             THING_TYPE_VARIABLE_FAN, THING_TYPE_REMOTE).collect(Collectors.toSet()));
 
     // List of all Channel ids
     public final static String PROPERTY_UUID = "uuid";
