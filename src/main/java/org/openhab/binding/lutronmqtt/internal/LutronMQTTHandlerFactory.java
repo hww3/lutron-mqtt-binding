@@ -20,18 +20,15 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.discovery.DiscoveryService;
 import org.eclipse.smarthome.core.thing.Bridge;
-import org.eclipse.smarthome.core.thing.ThingUID;
-import org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
+import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
+import org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants;
 import org.openhab.binding.lutronmqtt.discovery.LutronMQTTDeviceDiscoveryService;
-import org.openhab.binding.lutronmqtt.handler.LutronMQTTDimmableLightHandler;
-import org.openhab.binding.lutronmqtt.handler.LutronMQTTHubHandler;
-import org.openhab.binding.lutronmqtt.handler.LutronMQTTRemoteHandler;
-import org.openhab.binding.lutronmqtt.handler.LutronMQTTVariableFanHandler;
+import org.openhab.binding.lutronmqtt.handler.*;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
@@ -43,7 +40,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author William Welliver - Initial contribution
  */
-@Component(service = ThingHandlerFactory.class, immediate = true, configurationPid = "binding.lutronmqtt", name="lutronmqtt")
+@Component(service = ThingHandlerFactory.class, immediate = true, configurationPid = "binding.lutronmqtt", name = "lutronmqtt")
 @NonNullByDefault
 public class LutronMQTTHandlerFactory extends BaseThingHandlerFactory {
 
@@ -73,12 +70,17 @@ public class LutronMQTTHandlerFactory extends BaseThingHandlerFactory {
         } else if (thingTypeUID.equals(THING_TYPE_REMOTE)) {
             LutronMQTTRemoteHandler handler = new LutronMQTTRemoteHandler(thing);
             return handler;
-        }
-        else if (thingTypeUID.equals(THING_TYPE_DIMMABLE_LIGHT)) {
+        } else if (thingTypeUID.equals(THING_TYPE_DIMMABLE_LIGHT)) {
             LutronMQTTDimmableLightHandler handler = new LutronMQTTDimmableLightHandler(thing);
+            return handler;
+        } else if (thingTypeUID.equals(THING_TYPE_LIGHT)) {
+            LutronMQTTLightHandler handler = new LutronMQTTLightHandler(thing);
             return handler;
         } else if (thingTypeUID.equals(THING_TYPE_VARIABLE_FAN)) {
             LutronMQTTVariableFanHandler handler = new LutronMQTTVariableFanHandler(thing);
+            return handler;
+        } else if (thingTypeUID.equals(THING_TYPE_SHADE)) {
+            LutronMQTTShadeHandler handler = new LutronMQTTShadeHandler(thing);
             return handler;
         }
 
@@ -106,5 +108,4 @@ public class LutronMQTTHandlerFactory extends BaseThingHandlerFactory {
             }
         }
     }
-
 }

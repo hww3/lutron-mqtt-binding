@@ -13,9 +13,6 @@ import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.lutronmqtt.model.LutronDevice;
 
-import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.CHANNEL_LIGHT_LEVEL;
-import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.CHANNEL_LIGHT_STATE;
-
 /**
  * The {@link LutronMQTTRemoteHandler} is responsible for handling commands, which are
  * sent to one of the channels.
@@ -30,21 +27,17 @@ public class LutronMQTTRemoteHandler extends BaseThingHandler implements DeviceS
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-
     }
 
     @Override
     public void onDeviceFound(LutronDevice d) {
-
     }
 
     @Override
     public void onDeviceRemoved(LutronDevice d) {
-
     }
 
     @Override
     public void onDeviceStateChanged(LutronDevice light) {
-
     }
 }

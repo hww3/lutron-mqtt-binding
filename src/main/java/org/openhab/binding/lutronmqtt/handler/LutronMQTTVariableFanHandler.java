@@ -7,10 +7,10 @@
  */
 package org.openhab.binding.lutronmqtt.handler;
 
-import org.eclipse.smarthome.core.thing.Thing;
-
 import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.CHANNEL_FAN_SPEED;
 import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.CHANNEL_POWER_SWITCH;
+
+import org.eclipse.smarthome.core.thing.Thing;
 
 /**
  * The {@link LutronMQTTVariableFanHandler} is responsible for handling commands, which are

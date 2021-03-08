@@ -12,8 +12,17 @@
  */
 package org.openhab.binding.lutronmqtt.handler;
 
-import com.google.gson.Gson;
-import jersey.repackaged.com.google.common.collect.ImmutableList;
+import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.CONFIG_TOKEN;
+import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.PROPERTY_URL;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.thing.*;
@@ -26,17 +35,9 @@ import org.openhab.binding.lutronmqtt.model.LutronDevice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import com.google.gson.Gson;
 
-import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.CONFIG_TOKEN;
-import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.PROPERTY_URL;
-import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.PROPERTY_UUID;
+import jersey.repackaged.com.google.common.collect.ImmutableList;
 
 /**
  * The {@link LutronMQTTHubHandler} is responsible for handling commands, which are
@@ -56,7 +57,7 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
     private String token;
     private MqttBrokerConnection mqttClient;
     private Gson gson = new Gson();
-    private Map<Integer, LutronDevice> devicesByLinkAddress = new HashMap<>();
+    private Map<Integer, LutronDevice> devicesByObjectId = new HashMap<>();
     private ScheduledFuture<?> onlineTimeout;
     private ScheduledFuture<?> allItemsJob;
 
@@ -74,42 +75,41 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
 
         final String broker = properties.get(PROPERTY_URL);
 
+        String clientId = "openhab-lutron-mqtt-" + (System.currentTimeMillis() / 1000);
 
-        String clientId = "openhab-lutron-mqtt-" + (System.currentTimeMillis()/1000);
-
-            if(mqttClient == null || mqttClient.connectionState() == MqttConnectionState.DISCONNECTED) {
-                logger.warn("Attempting to connect to MQTT Broker.");
-                URI brokerUri = null;
-                try {
-                    brokerUri = new URI(broker);
-                } catch (URISyntaxException e) {
-                    logger.error("Lutron-MQTT broker url was invalid: " + broker);
-                    goOffline(ThingStatusDetail.CONFIGURATION_ERROR, "Lutron-MQTT broker url was invalid: " + broker);
-                    return;
-                }
-
-                MqttBrokerConnection brokerConnection = new MqttBrokerConnection(brokerUri.getHost(), brokerUri.getPort(), false, clientId);
-                brokerConnection.addConnectionObserver(this);
-                brokerConnection.setReconnectStrategy(new PeriodicReconnectStrategy());
-                updateStatus(ThingStatus.OFFLINE, "Preparing to connect to " + brokerUri.toASCIIString());
-
-                Boolean bool = null;
-                try {
-                    mqttClient = brokerConnection;
-                    bool = brokerConnection.start().get();
-                } catch (InterruptedException|ExecutionException e) {
-                    logger.warn("MQTT startup failed.", e);
-                }
-                logger.warn("MQTT startup returned " + bool);
+        if (mqttClient == null || mqttClient.connectionState() == MqttConnectionState.DISCONNECTED) {
+            logger.warn("Attempting to connect to MQTT Broker.");
+            URI brokerUri = null;
+            try {
+                brokerUri = new URI(broker);
+            } catch (URISyntaxException e) {
+                logger.error("Lutron-MQTT broker url was invalid: " + broker);
+                goOffline(ThingStatusDetail.CONFIGURATION_ERROR, "Lutron-MQTT broker url was invalid: " + broker);
+                return;
             }
 
-            //  logger.error("Unable to connect to MQTT broker at " + broker, e);
-          //  goOffline(ThingStatusDetail.COMMUNICATION_ERROR, "Unable to connect to MQTT broker at broker");
+            MqttBrokerConnection brokerConnection = new MqttBrokerConnection(brokerUri.getHost(), brokerUri.getPort(),
+                    false, clientId);
+            brokerConnection.addConnectionObserver(this);
+            brokerConnection.setReconnectStrategy(new PeriodicReconnectStrategy());
+            updateStatus(ThingStatus.OFFLINE, "Preparing to connect to " + brokerUri.toASCIIString());
 
+            Boolean bool = null;
+            try {
+                mqttClient = brokerConnection;
+                bool = brokerConnection.start().get();
+            } catch (InterruptedException | ExecutionException e) {
+                logger.warn("MQTT startup failed.", e);
+            }
+            logger.warn("MQTT startup returned " + bool);
+        }
+
+        // logger.error("Unable to connect to MQTT broker at " + broker, e);
+        // goOffline(ThingStatusDetail.COMMUNICATION_ERROR, "Unable to connect to MQTT broker at broker");
     }
 
     protected void updateStatus(ThingStatus status, String statusDetail) {
-        this.updateStatus(status, ThingStatusDetail.NONE, (String)statusDetail);
+        this.updateStatus(status, ThingStatusDetail.NONE, (String) statusDetail);
     }
 
     @Override
@@ -117,34 +117,34 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
         logger.info("Disposing of handler " + this);
         super.dispose();
 
-            mqttClient.stop();
-            cancelJobs();
+        mqttClient.stop();
+        cancelJobs();
 
-            mqttClient = null;
+        mqttClient = null;
     }
 
     private void cancelJobs() {
-        if(allItemsJob != null && !allItemsJob.isCancelled())
+        if (allItemsJob != null && !allItemsJob.isCancelled())
             allItemsJob.cancel(true);
-        if(onlineTimeout != null && !onlineTimeout.isCancelled())
+        if (onlineTimeout != null && !onlineTimeout.isCancelled())
             onlineTimeout.cancel(true);
     }
 
     private void setupSubscriptions() {
         try {
             mqttClient.unsubscribeAll().get();
-        } catch (InterruptedException|ExecutionException e) {
+        } catch (InterruptedException | ExecutionException e) {
             logger.warn("An error occurred while unsubscribing.", e);
         }
         logger.info("Subscribing.");
-        for(String topic : new String[] {"lutron/status", "lutron/events", "lutron/remote"}) {
+        for (String topic : new String[] { "lutron/status", "lutron/events", "lutron/remote" }) {
             try {
                 logger.info("subscribing to " + topic);
-                if(!mqttClient.subscribe(topic, this).get()) {
+                if (!mqttClient.subscribe(topic, this).get()) {
                     logger.error("subscribe failed.");
                     goOffline(ThingStatusDetail.COMMUNICATION_ERROR, "Unable to subscribe to events");
                 }
-            } catch (InterruptedException|ExecutionException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 logger.warn("An error occurred while subscribing.", e);
             }
         }
@@ -157,7 +157,7 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
             public void run() {
                 requestAllItems();
             }
-        }, 5, TimeUnit.SECONDS);
+        }, 10, TimeUnit.SECONDS);
     }
 
     private void requestAllItems() {
@@ -171,8 +171,8 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
         try {
             Boolean res = mqttClient.publish("lutron/commands", (b), 0, false).get();
             logger.warn("Publish returned " + res);
-        } catch(Exception e) {
-          logger.warn("Exception while publishing.", e);
+        } catch (Exception e) {
+            logger.warn("Exception while publishing.", e);
         }
 
         allItemsJob = scheduler.schedule(new Runnable() {
@@ -185,7 +185,6 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-
     }
 
     protected void goOnline() {
@@ -194,8 +193,10 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
 
     protected void goOffline(ThingStatusDetail detail, String reason) {
         updateStatus(ThingStatus.OFFLINE, detail, reason);
-        if(onlineTimeout != null) onlineTimeout.cancel(true);
-        if(allItemsJob != null) onlineTimeout.cancel(true);
+        if (onlineTimeout != null)
+            onlineTimeout.cancel(true);
+        if (allItemsJob != null)
+            onlineTimeout.cancel(true);
     }
 
     public Collection<LutronDevice> getDevices() {
@@ -213,7 +214,7 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
     @Override
     public void processMessage(String s, byte[] mqttMessage) {
         logger.warn("messageArrived: " + s + " " + mqttMessage.toString());
-        switch(s) {
+        switch (s) {
             case "lutron/status":
                 handleStatusMessage(mqttMessage);
                 break;
@@ -227,51 +228,50 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
     }
 
     private void handleGatewayEvent(byte[] mqttMessage) {
-        //logger.info("gateway event: " + new String(mqttMessage.getPayload()));
-        Map <String,Object> msg = gson.fromJson(new String(mqttMessage), HashMap.class);
+        // logger.info("gateway event: " + new String(mqttMessage.getPayload()));
+        Map<String, Object> msg = gson.fromJson(new String(mqttMessage), HashMap.class);
 
-        if(msg.containsKey("cmd")) {
-            String key = (String)msg.get("cmd");
+        if (msg.containsKey("cmd")) {
+            String key = (String) msg.get("cmd");
             Object arg = msg.get("args");
-            switch(key) {
+            switch (key) {
                 case "ListDevices":
                     int i = 0;
                     logger.warn("ListDevices Response: " + arg);
                     List<LutronDevice> devices = new ArrayList<>();
-                    for(Map<String,Object> objectMap : (List<Map<String,Object>>)arg) {
+                    for (Map<String, Object> objectMap : (List<Map<String, Object>>) arg) {
                         getThing().getThings();
                         final LutronDevice device = new LutronDevice(objectMap);
                         logger.info("Device: " + device);
                         devices.add(device);
-                        if(devicesByLinkAddress.containsKey(device.getLinkAddress())) {
+                        if (devicesByObjectId.containsKey(device.getObjectId())) {
                             // TODO copy properties to new device
                         }
-                        devicesByLinkAddress.put(device.getLinkAddress(), device);
+                        devicesByObjectId.put(device.getObjectId(), device);
                         scheduler.schedule(new Runnable() {
                             @Override
                             public void run() {
-                                requestUpdateForDevice(device.getLinkAddress());
+                                requestUpdateForDevice(device.getObjectId());
                             }
-                        }, i++%3, TimeUnit.SECONDS);
+                        }, i++ % 3, TimeUnit.SECONDS);
                     }
 
                     this.deviceList = devices;
 
                     break;
                 case "RuntimePropertyUpdate":
-                    int linkAddress = ((Number)(((Map)arg).get("ObjectId"))).intValue();
-                    LutronDevice device = getDeviceByLinkAddress(linkAddress);
-                    if(device == null) {
-                        logger.warn("Unable to find LutronDevice with linkAddress="  + linkAddress);
+                    int objectId = ((Number) (((Map) arg).get("ObjectId"))).intValue();
+                    LutronDevice device = getDeviceByObjectId(objectId);
+                    if (device == null) {
+                        logger.warn("Unable to find LutronDevice with objectId=" + objectId);
                     }
-                    List<List<Object>> l = (List<List<Object>>)(((Map)arg).get("Properties"));
-                    for(List property : l) {
-                        int pnum = ((Number)(property.get(0))).intValue();
-                        int pval = ((Number)(property.get(1))).intValue();
+                    List<List<Object>> l = (List<List<Object>>) (((Map) arg).get("Properties"));
+                    for (List property : l) {
+                        int pnum = ((Number) (property.get(0))).intValue();
+                        int pval = ((Number) (property.get(1))).intValue();
                         device.putProperty(pnum, pval);
                     }
                     informDeviceListeners(device);
-
 
                     break;
                 default:
@@ -281,9 +281,9 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
         }
     }
 
-    protected void requestUpdateForDevice(int linkAddress) {
-            byte[] b = ("{\"cmd\":\"RuntimePropertyQuery\", \"args\":{\"Params\":[[" + linkAddress + ",15,[1]]]}}").getBytes();
-            mqttClient.publish("lutron/commands", b);
+    protected void requestUpdateForDevice(int objectId) {
+        byte[] b = ("{\"cmd\":\"RuntimePropertyQuery\", \"args\":{\"Params\":[[" + objectId + ",15,[1]]]}}").getBytes();
+        mqttClient.publish("lutron/commands", b);
     }
 
     protected void informDeviceListeners(LutronDevice device) {
@@ -293,23 +293,23 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
         }
     }
 
-    public LutronDevice getDeviceByLinkAddress(int linkAddress) {
-        logger.warn("looking for device with link address =" + linkAddress);
-        return devicesByLinkAddress.get(linkAddress);
+    public LutronDevice getDeviceByObjectId(int objectId) {
+        logger.warn("looking for device with objectId =" + objectId);
+        return devicesByObjectId.get(objectId);
     }
 
     private void handleRemoteEvent(byte[] mqttMessage) {
         logger.info("remote event: " + new String(mqttMessage));
 
-        Map <String,Object> msg = gson.fromJson(new String(mqttMessage), HashMap.class);
-       // {"serial" : "C726CA", "action": "down", "button": "select"}
+        Map<String, Object> msg = gson.fromJson(new String(mqttMessage), HashMap.class);
+        // {"serial" : "C726CA", "action": "down", "button": "select"}
     }
 
     private void handleStatusMessage(byte[] mqttMessage) {
         logger.info("status message: " + new String(mqttMessage));
-        Map <String,Object> msg = gson.fromJson(new String(mqttMessage), HashMap.class);
-        if(msg.containsKey("state") && "running".equals(msg.get("state"))) {
-            if(onlineTimeout != null)
+        Map<String, Object> msg = gson.fromJson(new String(mqttMessage), HashMap.class);
+        if (msg.containsKey("state") && "running".equals(msg.get("state"))) {
+            if (onlineTimeout != null)
                 onlineTimeout.cancel(true);
             goOnline();
             onlineTimeout = scheduler.schedule(new Runnable() {
@@ -317,7 +317,7 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
                 public void run() {
                     onlineTimeoutOccurred();
                 }
-            },120, TimeUnit.SECONDS);
+            }, 120, TimeUnit.SECONDS);
         }
     }
 
@@ -327,12 +327,12 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
             mqttClient.stop().get();
             Thread.sleep(5000);
             initialize();
-        } catch(Exception e) {
+        } catch (Exception e) {
             logger.warn("An error occurred while restarting the service.", e);
         }
     }
 
-    public void setDesiredState(int deviceId, Map<String, Object> lightState) {
+    public void setDesiredState(Map<String, Object> lightState) {
         byte[] bytes = new byte[0];
         try {
             bytes = (gson.toJson(lightState)).getBytes("UTF-8");
@@ -343,17 +343,18 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
         Boolean res = null;
         try {
             res = mqttClient.publish("lutron/commands", bytes, 0, false).get();
-            if(res)
+            if (res)
                 logger.info("Sent message.");
-            else logger.warn("Failed to send message: " + new String(bytes));
-        } catch (InterruptedException|ExecutionException e) {
+            else
+                logger.warn("Failed to send message: " + new String(bytes));
+        } catch (InterruptedException | ExecutionException e) {
             logger.warn("Error sending message.", e);
         }
     }
 
     @Override
     public void connectionStateChanged(MqttConnectionState mqttConnectionState, @Nullable Throwable throwable) {
-        if(mqttConnectionState == MqttConnectionState.CONNECTED) {
+        if (mqttConnectionState == MqttConnectionState.CONNECTED) {
             logger.info("MQTT connection state changed to CONNECTED.");
             goOnline();
             logger.info("Online");
@@ -362,9 +363,8 @@ public class LutronMQTTHubHandler extends BaseBridgeHandler implements MqttMessa
                 public void run() {
                     setupSubscriptions();
                     logger.info("Subscribed.");
-
                 }
-            },1, TimeUnit.SECONDS);
+            }, 1, TimeUnit.SECONDS);
         } else if (mqttConnectionState == MqttConnectionState.CONNECTING) {
             goOffline(ThingStatusDetail.BRIDGE_OFFLINE, "MQTT Reconnecting");
         } else if (mqttConnectionState == MqttConnectionState.DISCONNECTED) {

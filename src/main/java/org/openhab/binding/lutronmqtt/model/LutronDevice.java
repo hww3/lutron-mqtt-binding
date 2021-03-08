@@ -4,50 +4,64 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class LutronDevice {
-    int id;
+    // int id;
     String name;
-    int integrationId;
+    // int integrationId;
     String description;
-    int linkAddress;
+    int objectId;
+    // int linkAddress;
     int serialNumber;
     int deviceClass;
 
-    Map<Integer,Integer> properties = new HashMap<>();
+    Map<Integer, Integer> properties = new HashMap<>();
     private long lastUpdated;
 
-    public LutronDevice(Map<String,Object> d) {
-        setSerialNumber(Integer.parseInt((String)d.get("SerialNumber")));
-        setDeviceClass(Integer.parseInt((String)d.get("DeviceClass")));
-        setDescription((String)d.get("Description"));
-        setLinkAddress(Integer.parseInt((String)d.get("LinkAddress")));
-        setName((String)d.get("Name"));
-        setId(Integer.parseInt((String)d.get("DeviceID")));
-        setIntegrationId(Integer.parseInt((String)d.get("IntegrationID")));
+    public LutronDevice(Map<String, Object> d) {
+        setSerialNumber(Integer.parseInt((String) d.get("SerialNumber")));
+        setDeviceClass(Integer.parseInt((String) d.get("DeviceClass")));
+        setDescription((String) d.get("Description"));
+        setObjectId(Integer.parseInt((String) d.get("ObjectId")));
+        // setLinkAddress(Integer.parseInt((String) d.get("LinkAddress")));
+        setName((String) d.get("Name"));
+        // setId(Integer.parseInt((String) d.get("DeviceID")));
+        // setIntegrationId(Integer.parseInt((String) d.get("IntegrationID")));
     }
 
-    public int getId() {
-        return id;
+    // public int getId() {
+    // return id;
+    // }
+    //
+    // public void setId(int id) {
+    // this.id = id;
+    // }
+
+    public int getObjectId() {
+        return objectId;
     }
 
-    public void setId(int id) {
-        this.id = id;
+    public void setObjectId(int objectId) {
+        this.objectId = objectId;
     }
 
-    public int getLinkAddress() { return linkAddress; }
-
-    public void setLinkAddress(int linkAddress) { this.linkAddress = linkAddress; }
+    // public int getLinkAddress() {
+    // return linkAddress;
+    // }
+    //
+    // public void setLinkAddress(int linkAddress) {
+    // this.linkAddress = linkAddress;
+    // }
 
     public String getName() {
         return name;
     }
 
-    public int getIntegrationId() {
-        return integrationId;
-    }
-
-    public void setIntegrationId(int integrationId) {
-        this.integrationId = integrationId;
-    }
+    // public int getIntegrationId() {
+    // return integrationId;
+    // }
+    //
+    // public void setIntegrationId(int integrationId) {
+    // this.integrationId = integrationId;
+    // }
 
     public String getDescription() {
         return description;
@@ -83,25 +97,32 @@ public class LutronDevice {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         LutronDevice that = (LutronDevice) o;
 
-        if (id != that.id) return false;
-        if (integrationId != that.integrationId) return false;
-        if (serialNumber != that.serialNumber) return false;
-        if (deviceClass != that.deviceClass) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+        if (objectId != that.objectId)
+            return false;
+        // if (integrationId != that.integrationId)
+        // return false;
+        if (serialNumber != that.serialNumber)
+            return false;
+        if (deviceClass != that.deviceClass)
+            return false;
+        if (name != null ? !name.equals(that.name) : that.name != null)
+            return false;
         return description != null ? description.equals(that.description) : that.description == null;
     }
 
     @Override
     public int hashCode() {
-        int result = id;
+        int result = objectId;
         result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + integrationId;
-        result = 31 * result + linkAddress;
+        // result = 31 * result + integrationId;
+        // result = 31 * result + objectId;
         result = 31 * result + (description != null ? description.hashCode() : 0);
         result = 31 * result + serialNumber;
         result = 31 * result + deviceClass;
@@ -110,15 +131,8 @@ public class LutronDevice {
 
     @Override
     public String toString() {
-        return "LutronDevice{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", integrationId=" + integrationId +
-                ", linkAddress=" + linkAddress +
-                ", description='" + description + '\'' +
-                ", serialNumber=" + serialNumber +
-                ", deviceClass=" + deviceClass +
-                '}';
+        return "LutronDevice{" + "objectId=" + objectId + ", name='" + name + '\'' + ", description='" + description
+                + '\'' + ", serialNumber=" + serialNumber + ", deviceClass=" + deviceClass + '}';
     }
 
     public boolean hasUpdatedProperties() {

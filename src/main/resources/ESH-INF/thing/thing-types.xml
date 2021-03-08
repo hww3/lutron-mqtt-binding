@@ -1,96 +1,145 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<thing:thing-descriptions bindingId="lutronmqtt" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                          xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
-                          xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
+<thing:thing-descriptions bindingId="lutronmqtt"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
 
-    <thing-type id="dimmableLight">
-        <supported-bridge-type-refs>
-            <bridge-type-ref id="hub"/>
-        </supported-bridge-type-refs>
+	<thing-type id="dimmableLight">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="hub"/>
+		</supported-bridge-type-refs>
 
-        <label>Dimmable Light</label>
-        <description>Controls dimmable loads</description>
+		<label>Dimmable Light</label>
+		<description>Controls dimmable loads</description>
 
-        <channels>
-            <channel id="lightlevel" typeId="lightDimmer"/>
-            <!--             <channel id="lightstate" typeId="lightSwitch"/>  -->
-        </channels>
+		<channels>
+			<channel id="lightlevel" typeId="lightDimmer"/>
+			<!-- <channel id="lightstate" typeId="lightSwitch"/> -->
+		</channels>
 
-        <properties>
-            <property name="objectId"></property>
-            <property name="integrationId"></property>
-            <property name="name"></property>
-        </properties>
-    </thing-type>
+		<properties>
+			<property name="objectId"></property>
+			<!-- <property name="integrationId"></property> -->
+			<property name="name"></property>
+		</properties>
+	</thing-type>
 
-    <thing-type id="variableFan">
-        <supported-bridge-type-refs>
-            <bridge-type-ref id="hub"/>
-        </supported-bridge-type-refs>
+	<thing-type id="light">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="hub"/>
+		</supported-bridge-type-refs>
 
-        <label>Variable Speed Fan</label>
-        <description>Controls variable speed fans</description>
+		<label>Light Switch</label>
+		<description>Controls switchable loads</description>
 
-        <channels>
-            <channel id="fanSpeed" typeId="fanSpeed"/>
-            <!--             <channel id="powerSwitch" typeId="powerSwitch"/> -->
-        </channels>
+		<channels>
+			<channel id="state" typeId="lightSwitch"/>
+		</channels>
 
-        <properties>
-            <property name="objectId"></property>
-            <property name="integrationId"></property>
-            <property name="linkAddress"></property>
-            <property name="name"></property>
-        </properties>
-    </thing-type>
-
-    <channel-type id="lightDimmer">
-        <item-type>Dimmer</item-type>
-        <label>Light Level</label>
-        <description>Increase/decrease the light level</description>
-        <category>DimmableLight</category>
-        <state min="0" max="100" pattern="%d %%"/>
-    </channel-type>
-
-    <channel-type id="lightSwitch">
-        <item-type>Switch</item-type>
-        <label>Light State</label>
-        <description>Turn the light on or off</description>
-        <category>DimmableLight</category>
-    </channel-type>
-
-    <channel-type id="fanSpeed">
-        <item-type>Dimmer</item-type>
-        <label>Fan Speed</label>
-        <description>Increase/decrease the speed</description>
-        <category>VariableFan</category>
-        <state min="0" max="100" pattern="%d %%"/>
-    </channel-type>
-
-    <channel-type id="powerSwitch">
-        <item-type>Switch</item-type>
-        <label>Power State</label>
-        <description>Turn the item on or off</description>
-        <category>VariableFan</category>
-    </channel-type>
+		<properties>
+			<property name="objectId"></property>
+			<!-- <property name="integrationId"></property> -->
+			<property name="name"></property>
+		</properties>
+	</thing-type>
 
 
-    <!-- Sample Thing Type -->
-    <thing-type id="sample">
-        <label>LutronMQTT Binding Thing</label>
-        <description>Sample thing for LutronMQTT Binding</description>
+	<thing-type id="variableFan">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="hub"/>
+		</supported-bridge-type-refs>
 
-        <channels>
-            <channel id="channel1" typeId="sample-channel" />
-        </channels>
+		<label>Variable Speed Fan</label>
+		<description>Controls variable speed fans</description>
 
-        <config-description>
-            <parameter name="config1" type="text" required="true">
-                <label>Sample parameter</label>
-                <description>This is a sample text configuration parameter.</description>
-            </parameter>
-        </config-description>
+		<channels>
+			<channel id="fanSpeed" typeId="fanSpeed"/>
+			<!-- <channel id="powerSwitch" typeId="powerSwitch"/> -->
+		</channels>
 
-    </thing-type>
+		<properties>
+			<property name="objectId"></property>
+			<!-- <property name="integrationId"></property> -->
+			<!-- <property name="linkAddress"></property> -->
+			<property name="name"></property>
+		</properties>
+	</thing-type>
+
+	<thing-type id="shade">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="hub"/>
+		</supported-bridge-type-refs>
+
+		<label>Shade</label>
+		<description>Remotely controllable window covering</description>
+
+		<channels>
+			<channel id="shadeLevel" typeId="shadeLevel"/>
+		</channels>
+
+		<properties>
+			<property name="objectId"></property>
+			<!-- <property name="integrationId"></property> -->
+			<!-- <property name="linkAddress"></property> -->
+			<property name="name"></property>
+		</properties>
+	</thing-type>
+
+	<channel-type id="lightDimmer">
+		<item-type>Dimmer</item-type>
+		<label>Light Level</label>
+		<description>Increase/decrease the light level</description>
+		<category>DimmableLight</category>
+		<state min="0" max="100" pattern="%d %%"/>
+	</channel-type>
+
+	<channel-type id="lightSwitch">
+		<item-type>Switch</item-type>
+		<label>Light State</label>
+		<description>Turn the light on or off</description>
+		<category>DimmableLight</category>
+	</channel-type>
+
+	<channel-type id="fanSpeed">
+		<item-type>Dimmer</item-type>
+		<label>Fan Speed</label>
+		<description>Increase/decrease the speed</description>
+		<category>VariableFan</category>
+		<state min="0" max="100" pattern="%d %%"/>
+	</channel-type>
+
+	<channel-type id="shadeLevel">
+		<item-type>Rollershutter</item-type>
+		<label>Shade Level</label>
+		<description>Increase/decrease the speed</description>
+		<category>Blinds</category>
+		<state min="0" max="100" pattern="%d %%"/>
+	</channel-type>
+
+	<channel-type id="powerSwitch">
+		<item-type>Switch</item-type>
+		<label>Power State</label>
+		<description>Turn the item on or off</description>
+		<category>VariableFan</category>
+	</channel-type>
+
+
+	<!-- Sample Thing Type -->
+	<thing-type id="sample">
+		<label>LutronMQTT Binding Thing</label>
+		<description>Sample thing for LutronMQTT Binding</description>
+
+		<channels>
+			<channel id="channel1" typeId="sample-channel"/>
+		</channels>
+
+		<config-description>
+			<parameter name="config1" type="text" required="true">
+				<label>Sample parameter</label>
+				<description>This is a sample text configuration parameter.</description>
+			</parameter>
+		</config-description>
+
+	</thing-type>
 
 </thing:thing-descriptions>

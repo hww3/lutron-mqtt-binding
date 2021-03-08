@@ -9,5 +9,4 @@ public interface DeviceStatusListener {
     public void onDeviceRemoved(LutronDevice d);
 
     public void onDeviceStateChanged(LutronDevice light);
-
 }

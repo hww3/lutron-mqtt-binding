@@ -7,10 +7,11 @@
  */
 package org.openhab.binding.lutronmqtt.handler;
 
-import com.google.gson.Gson;
-import org.eclipse.smarthome.core.library.types.IncreaseDecreaseType;
-import org.eclipse.smarthome.core.library.types.OnOffType;
-import org.eclipse.smarthome.core.library.types.PercentType;
+import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.*;
+
+import java.util.Map;
+
+import org.eclipse.smarthome.core.library.types.*;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
@@ -24,9 +25,7 @@ import org.openhab.binding.lutronmqtt.model.LutronDevice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-
-import static org.openhab.binding.lutronmqtt.LutronMQTTBindingConstants.*;
+import com.google.gson.Gson;
 
 /**
  * The {@link PowerLevelDeviceHandler} is responsible for handling commands, which are
@@ -38,11 +37,13 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
 
     protected Logger log = LoggerFactory.getLogger(getClass());
 
-    protected int deviceId; //
-    protected int integrationId;
+    protected int objectId;
+    // protected int deviceId; //
+    // protected int integrationId;
     protected LutronDevice device; // last update received for this device.
-    protected int linkAddress;
+    // protected int linkAddress;
 
+    boolean setAsIs = false;
     protected LutronMQTTHubHandler hubHandler;
 
     protected final String powerLevelChannelName;
@@ -56,12 +57,15 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        Map<String,Object> lightState = null;
+        Map<String, Object> lightState = null;
         String ch = channelUID.getId();
-        log.warn("Got a command for channel id=" + ch  + ", command=" + command);
+        log.warn("Got a command for channel id=" + ch + ", command=" + command);
+
+        log.info("command= " + command + ", last device reading=" + getDevice().getProperty(LUTRON_PROPERTY_LEVEL));
 
         if (log.isTraceEnabled()) {
-            log.trace("command= " + command + ", last device reading=" + getDevice().getProperty(LUTRON_PROPERTY_LEVEL));
+            log.trace(
+                    "command= " + command + ", last device reading=" + getDevice().getProperty(LUTRON_PROPERTY_LEVEL));
         }
         if (powerLevelChannelName.equals(ch)) {
             if (command instanceof PercentType) {
@@ -70,6 +74,13 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
                 lightState = LightStateConverter.toLightState((OnOffType) command, getDevice());
             } else if (command instanceof IncreaseDecreaseType) {
                 lightState = LightStateConverter.toLightState((IncreaseDecreaseType) command, getDevice());
+            } else if (command instanceof UpDownType) {
+                lightState = LightStateConverter.toLightState((UpDownType) command, getDevice());
+            } else if (command == StopMoveType.STOP) {
+                setAsIs = true;
+                log.warn("STOPPING");
+                scheduleUpdateForDevice(objectId);
+                // lightState = LightStateConverter.toLightState((Sto) command, getDevice());
             }
         }
 
@@ -80,10 +91,12 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
          * }
          * }
          */
+        Gson gson = new Gson();
+        log.info("converted " + command + " to " + gson.toJson(lightState));
 
         if (lightState != null) {
             if (log.isTraceEnabled()) {
-                Gson gson = new Gson();
+                // Gson gson = new Gson();
                 log.trace("converted " + command + " to " + gson.toJson(lightState));
             }
             updateDeviceState(lightState);
@@ -94,7 +107,7 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
 
     protected void updateDeviceState(Map<String, Object> lightState) {
         log.warn("updateDeviceState: " + lightState);
-        getHubHandler().setDesiredState(deviceId, lightState);
+        getHubHandler().setDesiredState(lightState);
     }
 
     @Override
@@ -105,18 +118,15 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
 
     private void initializeThing(ThingStatus bridgeStatus) {
         log.debug("initializeThing thing {} bridge status {}", getThing().getUID(), bridgeStatus);
-        final String configDeviceId = getThing().getProperties().get(PROPERTY_OBJECT_ID);
-        log.warn("intializeThing " + getThing().getProperties().get(PROPERTY_INTEGRATION_ID));
-        integrationId = Integer.parseInt(getThing().getProperties().get(PROPERTY_INTEGRATION_ID));
-        linkAddress = Integer.parseInt(getThing().getProperties().get(PROPERTY_LINK_ADDRESS));
+        final Integer _objectId = Integer.valueOf(getThing().getProperties().get(PROPERTY_OBJECT_ID));
+        log.warn("intializeThing " + _objectId);
 
-        if (configDeviceId != null) {
-            deviceId = Integer.valueOf(configDeviceId);
-
+        if (_objectId != null) {
+            this.objectId = _objectId;
             if (getHubHandler() != null) {
                 if (bridgeStatus == ThingStatus.ONLINE) {
-                    getHubHandler().requestUpdateForDevice(linkAddress);
-                    LutronDevice device = getHubHandler().getDeviceByLinkAddress(linkAddress);
+                    getHubHandler().requestUpdateForDevice(objectId);
+                    LutronDevice device = getHubHandler().getDeviceByObjectId(objectId);
                     if (device == null) {
                         updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
                         return;
@@ -124,7 +134,7 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
                     updateStatus(ThingStatus.ONLINE);
 
                     // receiving a response to the request update method above should trigger a state change.
-                    //onDeviceStateChanged(getHubHandler().getDeviceByIntegrationId(integrationId));
+                    // onDeviceStateChanged(getHubHandler().getDeviceByIntegrationId(integrationId));
                     // initializeProperties();
                 } else {
                     updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
@@ -140,13 +150,13 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
     @Override
     public void dispose() {
         log.debug("Handler disposed. Unregistering listener.");
-        if (deviceId != 0) { // technically 0 is a valid device id but it appears to be reserved for the hub
+        if (objectId != 0) { // technically 0 is a valid device id but it appears to be reserved for the hub
             LutronMQTTHubHandler hubHandler = getHubHandler();
             if (hubHandler != null) {
                 hubHandler.unregisterDeviceStatusListener(this);
                 this.hubHandler = null;
             }
-            deviceId = 0;
+            objectId = 0;
         }
     }
 
@@ -167,17 +177,15 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
         return this.hubHandler;
     }
 
-    protected void scheduleUpdateForDevice(int deviceId) {
-        if (true == true) {
-            return;
-        }
-        log.info("Scheduling an update request for deviceId=" + deviceId);
+    protected void scheduleUpdateForDevice(int objectId) {
+
+        log.info("Scheduling an update request for deviceId=" + objectId);
         scheduler.submit(new Runnable() {
             @Override
             public void run() {
                 LutronMQTTHubHandler handler = getHubHandler();
                 if (handler != null) {
-                    onDeviceStateChanged(handler.getDeviceByLinkAddress(linkAddress));
+                    onDeviceStateChanged(handler.getDeviceByObjectId(objectId));
                 }
             }
         });
@@ -189,7 +197,7 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
         }
 
         LutronMQTTHubHandler handler = getHubHandler();
-        device = handler.getDeviceByLinkAddress(linkAddress);
+        device = handler.getDeviceByObjectId(objectId);
         return device;
     }
 
@@ -197,7 +205,7 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
     public void bridgeStatusChanged(ThingStatusInfo bridgeStatus) {
         super.bridgeStatusChanged(bridgeStatus);
         if (bridgeStatus.getStatus() == ThingStatus.ONLINE) {
-            scheduleUpdateForDevice(linkAddress);
+            scheduleUpdateForDevice(objectId);
         }
     }
 
@@ -205,7 +213,7 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
     public void channelLinked(ChannelUID channelUID) {
         if (this.getBridge().getStatus() == ThingStatus.ONLINE) {
             // TODO really only need 1 for each device, no matter the channelse.
-            scheduleUpdateForDevice(linkAddress);
+            scheduleUpdateForDevice(objectId);
         } else {
             log.info("Channel Linked but hub is not online.");
         }
@@ -213,7 +221,7 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
 
     @Override
     public void onDeviceFound(LutronDevice d) {
-        if (d.getId() == deviceId) {
+        if (d.getObjectId() == objectId) {
             updateStatus(ThingStatus.ONLINE);
             onDeviceStateChanged(d);
         }
@@ -221,24 +229,32 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
 
     @Override
     public void onDeviceRemoved(LutronDevice d) {
-        if (d.getId() == deviceId) {
+        if (d.getObjectId() == objectId) {
             updateStatus(ThingStatus.OFFLINE);
         }
     }
 
     @Override
     public void onDeviceStateChanged(LutronDevice d) {
-        if (d.getLinkAddress() != linkAddress) {
+        log.trace("onDeviceStateChanged my id=" + objectId + ", update is for " + d.getObjectId() + ", name="
+                + d.getName());
+        if (d.getObjectId() != objectId) {
             return;
         }
 
-        log.info("Go device status change for " + this.getThing().getLabel());
+        if (setAsIs) {
+            log.warn("AS IS: " + d.getProperty(LUTRON_PROPERTY_LEVEL));
+            setAsIs = false;
+        }
+
+        log.debug("Go device status change for " + this.getThing().getLabel());
 
         if (d.hasUpdatedProperties()) {
             log.info("Received notice of pending state change.");
         }
 
-        if (false && device != null && d.getProperty(LUTRON_PROPERTY_LEVEL) == (device.getProperty(LUTRON_PROPERTY_LEVEL))) {
+        if (false && device != null
+                && d.getProperty(LUTRON_PROPERTY_LEVEL) == (device.getProperty(LUTRON_PROPERTY_LEVEL))) {
             log.info("Lutron Device: " + d.getName() + " Received State Changed but no difference");
             return;
         }
@@ -260,5 +276,4 @@ public class PowerLevelDeviceHandler extends BaseThingHandler implements DeviceS
 
         return brightness;
     }
-
 }
